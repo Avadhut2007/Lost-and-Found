@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MIT-WPU Lost & Found</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-4">
+  <h1 class="text-3xl font-bold text-blue-400 mb-6">MIT-WPU Lost & Found</h1>
+
+  <!-- Form to Add Item -->
+  <div class="bg-gray-800 shadow-xl rounded-2xl p-6 w-full max-w-md">
+    <h2 class="text-xl font-semibold mb-4">Report Lost/Found Item</h2>
+    <form id="itemForm" class="space-y-3">
+      <input type="text" id="itemName" placeholder="Item Name" class="w-full p-2 border border-gray-700 bg-gray-700 rounded text-white" required>
+      <textarea id="itemDesc" placeholder="Description" class="w-full p-2 border border-gray-700 bg-gray-700 rounded text-white" required></textarea>
+      <select id="itemType" class="w-full p-2 border border-gray-700 bg-gray-700 rounded text-white" required>
+        <option value="Lost">Lost</option>
+        <option value="Found">Found</option>
+      </select>
+      <input type="text" id="contact" placeholder="Contact Info" class="w-full p-2 border border-gray-700 bg-gray-700 rounded text-white" required>
+      <input type="file" id="itemImage" accept="image/*" class="w-full p-2 border border-gray-700 bg-gray-700 rounded text-white">
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition">Submit</button>
+    </form>
+  </div>
+
+  <!-- Display Items -->
+  <div class="mt-6 w-full max-w-md">
+    <h2 class="text-2xl font-semibold mb-3">Reported Items</h2>
+    <div id="itemList" class="space-y-3"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAsk9z7BYzTjvKuZjXeCxG1gIGI-2Hd3RI",
+      authDomain: "mitwpu-lostandfound.firebaseapp.com",
+      projectId: "mitwpu-lostandfound",
+      storageBucket: "mitwpu-lostandfound.firebasestorage.app",
+      messagingSenderId: "203572077794",
+      appId: "1:203572077794:web:4cff4f1af476e67fe26abb",
+      measurementId: "G-X2ZKSZQ36W"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const itemForm = document.getElementById('itemForm');
+    const itemList = document.getElementById('itemList');
+
+    // Display items in real-time
+    const itemsQuery = query(collection(db, 'items'), orderBy('timestamp', 'desc'));
+    onSnapshot(itemsQuery, snapshot => {
+      itemList.innerHTML = '';
+      snapshot.forEach(doc => {
+        const item = doc.data();
+        const div = document.createElement('div');
+        div.className = `p-4 rounded-xl shadow-md ${item.type === 'Lost' ? 'bg-red-900' : 'bg-green-900'}`;
+        div.innerHTML = `
+          ${item.image ? `<img src="${item.image}" alt="Item Image" class="mb-3 rounded-lg max-h-40 object-cover w-full">` : ''}
+          <h3 class="font-bold text-lg">${item.name} <span class="text-sm text-gray-300">(${item.type})</span></h3>
+          <p class="text-gray-200">${item.desc}</p>
+          <p class="text-sm text-gray-400">Contact: ${item.contact}</p>
+        `;
+        itemList.appendChild(div);
+      });
+    });
+
+    // Add new item
+    itemForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('itemName').value;
+      const desc = document.getElementById('itemDesc').value;
+      const type = document.getElementById('itemType').value;
+      const contact = document.getElementById('contact').value;
+      const imageInput = document.getElementById('itemImage');
+
+      const reader = new FileReader();
+      reader.onload = function() {
+        addDoc(collection(db, 'items'), {
+          name, desc, type, contact,
+          image: reader.result || null,
+          timestamp: serverTimestamp()
+        }).then(() => itemForm.reset());
+      };
+
+      if (imageInput.files[0]) {
+        reader.readAsDataURL(imageInput.files[0]);
+      } else {
+        reader.onload();
+      }
+    });
+  </script>
+</body>
+</html>
